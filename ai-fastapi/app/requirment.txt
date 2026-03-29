@@ -1,0 +1,7 @@
+langchain # langchain capabilities
+langgraph # graph workflows
+langchain-community # integrations & tools
+tiktoken # token counting
+python-multipart # file uploads
+fastapi # web framework
+uvicorn # server
