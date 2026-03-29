@@ -11,6 +11,17 @@ __pycache__/
 bin/
 obj/
 
+# Visual Studio
+.vs/
+
+# User-specific files
+*.user
+*.suo
+
+# Rider / VS Code (optional)
+.idea/
+.vscode/
+
 # OS
 .DS_Store
 Thumbs.db
