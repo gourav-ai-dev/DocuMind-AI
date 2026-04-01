@@ -167,3 +167,16 @@ This data flow ensures:
 * Scalable and maintainable design
 
 DocuMind AI combines structured data flow with AI intelligence to deliver a high-performance chatbot experience.
+
+
+User Query
+   ↓
+Embedding (nomic-embed-text) ✅
+   ↓
+Similarity Search (cosine) ✅
+   ↓
+Top Relevant Chunk ✅
+   ↓
+LLM (TinyLlama) uses context ✅
+   ↓
+Grounded Answer ✅

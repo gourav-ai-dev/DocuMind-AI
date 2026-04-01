@@ -200,3 +200,6 @@ The chosen tech stack balances:
 * Real-world applicability 
 
 DocuMind AI is designed not just as a demo project, but as a production-style AI system.
+
+
+

@@ -5,3 +5,5 @@ tiktoken # token counting
 python-multipart # file uploads
 fastapi # web framework
 uvicorn # server
+pyodbc #database
+requests
