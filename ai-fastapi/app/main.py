@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Form
 from app.services.document_processor import DocumentProcessor
 from app.services.embedding_service import EmbeddingService
 from app.services.db_service import DBService
@@ -17,36 +17,18 @@ llm_service = LLMService()
 def health():
     return {"status": "ok"}
 
-
-@app.post("/api/upload")
-async def upload(file: UploadFile = File(...)):
-    content = await file.read()
-
-    text = processor.extract_text(content)
-    chunks = processor.chunk_text(text)
-
-    embeddings = [embedding_service.generate_embedding(chunk) for chunk in chunks]
-
-    doc_id = db_service.save_document(file.filename)
-    db_service.save_chunks(doc_id, chunks, embeddings)
-
-    return {
-        "document_id": doc_id,
-        "total_chunks": len(chunks),
-        "message": "Stored in SQL Server"
-    }
-
 @app.post("/api/query")
 def query(data: dict):
     user_query = data.get("query", "")
-
+    user_id = data.get("userId")
+    
     query_embedding = embedding_service.generate_embedding(user_query)
 
-    relevant_chunks = retrieval_service.get_relevant_chunks(query_embedding)
+    relevant_chunks = retrieval_service.get_relevant_chunks(query_embedding, user_id=user_id)
 
     context = "\n".join(relevant_chunks)
 
-    recent_chats = db_service.get_recent_chats()
+    recent_chats = db_service.get_recent_chats(user_id=user_id)
 
     conversation_context = ""
 
@@ -65,9 +47,25 @@ def query(data: dict):
 
     answer = llm_service.generate_answer(user_query, full_context)
 
-    db_service.save_chat(user_query, answer)
+    db_service.save_chat(user_query, answer, user_id)
 
     return {
         "query": user_query,
         "answer": answer
     }
+
+@app.post("/api/upload")
+async def upload(file: UploadFile = File(...), userId: str = Form(...)):
+    file_bytes = await file.read()
+    file_name = file.filename
+
+    document_id = db_service.save_document(file_name, userId)
+
+    text = processor.extract_text(file_bytes)
+    chunks = processor.chunk_text(text)
+
+    for chunk in chunks:
+        embedding = embedding_service.generate_embedding(chunk)
+        db_service.save_chunks(document_id, chunk, embedding)
+
+    return {"message": "Document processed successfully"}

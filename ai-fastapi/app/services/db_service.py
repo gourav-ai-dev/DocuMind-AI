@@ -16,15 +16,15 @@ class DBService:
     def get_connection(self):
         return pyodbc.connect(self.connection_string)
 
-    def save_document(self, filename):
+    def save_document(self, filename, user_id):
         conn = self.get_connection()
         cursor = conn.cursor()
 
         doc_id = str(__import__("uuid").uuid4())
 
         cursor.execute(
-            "INSERT INTO Documents (Id, FileName, CreatedAt) VALUES (?, ?, ?)",
-            doc_id, filename, datetime.utcnow()
+            "INSERT INTO Documents (Id, FileName, CreatedAt, UserId) VALUES (?, ?, ?, ?)",
+            doc_id, filename, datetime.utcnow(), user_id
         )
 
         conn.commit()
@@ -50,7 +50,7 @@ class DBService:
         conn.commit()
         conn.close()
 
-    def save_chat(self, question, answer):
+    def save_chat(self, question, answer, user_id):
 
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -58,21 +58,22 @@ class DBService:
         chat_id = str(__import__("uuid").uuid4())
 
         cursor.execute(
-            "INSERT INTO Chathistories (Id, Question, Answer, CreatedAt) VALUES (?, ?, ?, ?)",
+            "INSERT INTO Chathistories (Id, UserId, Question, Answer, CreatedAt) VALUES (?, ?, ?, ?, ?)",
             chat_id,
+            user_id,
             question,
             answer,
             datetime.utcnow())
         conn.commit()
         conn.close()
 
-    def get_recent_chats(self, limit=3):
+    def get_recent_chats(self, user_id, limit=3):
 
         conn = self.get_connection()
         cursor = conn.cursor()
 
         cursor.execute(
-            f"SELECT TOP {limit} Question, Answer FROM Chathistories ORDER BY CreatedAt DESC")
+            f"""SELECT TOP {limit} Question, Answer FROM Chathistories WHERE UserId = ? ORDER BY CreatedAt DESC""", user_id)
         
         rows = cursor.fetchall()
 

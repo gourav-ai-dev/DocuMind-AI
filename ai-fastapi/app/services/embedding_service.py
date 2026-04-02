@@ -14,4 +14,12 @@ class EmbeddingService:
 
         data = response.json()
 
-        return data.get("embedding", [])
+        embedding = data.get("embedding")
+
+        if embedding is None:
+            raise Exception(f"Embedding API error: {data}")
+        
+        if not isinstance(embedding, list):
+            raise Exception(f"Invalid embedding format: {embedding}")
+
+        return embedding

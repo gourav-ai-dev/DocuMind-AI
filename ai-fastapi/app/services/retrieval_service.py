@@ -8,27 +8,41 @@ class RetrievalService:
     def __init__(self):
         self.db = DBService()
 
-    def get_relevant_chunks(self, query_embedding, top_k=3):
+    def get_relevant_chunks(self, query_embedding, user_id, top_k=3):
         conn = self.db.get_connection()
         cursor = conn.cursor()
 
-        cursor.execute("SELECT Content, Embedding FROM Chunks")
+        cursor.execute("""SELECT c.Content, c.Embedding FROM Chunks
+                        c JOIN Documents d ON c.DocumentId = d.Id
+                        WHERE d.UserId = ?""", user_id)
+        
         rows = cursor.fetchall()
 
         scored_chunks = []
 
         for row in rows:
             content = row[0]
-            embedding = json.loads(row[1])
+            embedding_raw = row[1]
 
-            score = cosine_similarity(query_embedding, embedding)
+            try:
+                embedding = json.loads(embedding_raw)
 
-            scored_chunks.append((content, score))
+                if not isinstance(embedding, list):
+                    continue
+
+                if not isinstance(query_embedding, list):
+                    raise Exception("Query embedding is not a list")
+                
+                score = cosine_similarity(query_embedding, embedding)
+
+                scored_chunks.append((content, score))
+            
+            except Exception as e:
+                print("Error Processing Embedding:", e)
+                continue
 
         conn.close()
 
-        # Sort by similarity
         scored_chunks.sort(key=lambda x: x[1], reverse=True)
 
-        # Return top K
         return [chunk for chunk, _ in scored_chunks[:top_k]]
