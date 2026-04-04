@@ -1,14 +1,11 @@
 import requests
+from app.config import settings
 
 class EmbeddingService:
 
-    def __init__(self):
-        self.url = "http://localhost:11434/api/embeddings"
-        self.model = "nomic-embed-text"
-
     def generate_embedding(self, text: str):
-        response = requests.post(self.url, json={
-            "model": self.model,
+        response = requests.post(settings.EMBEDDING_URL, json={
+            "model": settings.EMBEDDING_MODEL,
             "prompt": text
         })
 

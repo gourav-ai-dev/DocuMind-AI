@@ -1,0 +1,42 @@
+import os
+
+class Settings:
+
+    # 🔥 Database
+    DB_CONNECTION = os.getenv(
+        "DB_CONNECTION",
+        "Driver={ODBC Driver 17 for SQL Server};"
+        "Server=(localdb)\MSSQLLocalDB;"
+        "Database=DocuMindDB;"
+        "Trusted_Connection=yes;"
+    )
+
+    # 🔥 Embedding
+    EMBEDDING_URL = os.getenv(
+        "EMBEDDING_URL",
+        "http://localhost:11434/api/embeddings"
+    )
+
+    EMBEDDING_MODEL = os.getenv(
+        "EMBEDDING_MODEL",
+        "nomic-embed-text"
+    )
+
+    # 🔥 LLM
+    LLM_URL = os.getenv(
+        "LLM_URL",
+        "http://localhost:11434/api/generate"
+    )
+
+    LLM_MODEL = os.getenv(
+        "LLM_MODEL",
+        "tinyllama"
+    )
+
+    # 🔥 Chunking
+    CHUNK_SIZE = int(os.getenv("CHUNK_SIZE", 500))
+    CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", 50))
+
+
+# Singleton instance
+settings = Settings()

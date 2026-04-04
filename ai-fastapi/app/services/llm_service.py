@@ -1,35 +1,34 @@
 import requests
-
+from app.config import settings
 
 class LLMService:
 
-    def __init__(self):
-        self.url = "http://localhost:11434/api/generate"
-        self.model = "tinyllama"
-
     def generate_answer(self, query, context):
+       
+
        prompt = f"""
        You are an AI assistant.
 
-       Use BOTH:
-       1. Conversation history (for context)
-       2. Document context (for factual answers)
+       You MUST follow these rules:
+       - Use DOCUMENT CONTEXT for factual answers
+       - Use CHAT HISTORY only for understanding follow-up questions
+       - If answer is not in document context, say: "I don't know"
+       - Do NOT make up answers
 
-       Rules:
-       - Prefer document context for answers
-       - Use conversation history for understanding follow-ups
-       - If answer not in context, say "I don't know"
-
+       ---------------------
+       DOCUMENT CONTEXT:
        {context}
 
-       Question:
+       ---------------------
+       QUESTION:
        {query}
 
-       Answer:
+       ---------------------
+       ANSWER:
        """
 
-       response = requests.post(self.url, json={
-            "model": self.model,
+       response = requests.post(settings.LLM_URL, json={
+            "model": settings.LLM_MODEL,
             "prompt": prompt,
             "stream": False
         })

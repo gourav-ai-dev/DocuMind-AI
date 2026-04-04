@@ -1,20 +1,12 @@
 import pyodbc
 import json
 from datetime import datetime
-
+from app.config import settings
 
 class DBService:
 
-    def __init__(self):
-        self.connection_string = (
-            "DRIVER={ODBC Driver 17 for SQL Server};"
-            "SERVER=(localdb)\MSSQLLocalDB;"
-            "DATABASE=DocuMindDB;"
-            "Trusted_Connection=yes;"
-        )
-
     def get_connection(self):
-        return pyodbc.connect(self.connection_string)
+        return pyodbc.connect(settings.DB_CONNECTION)
 
     def save_document(self, filename, user_id):
         conn = self.get_connection()

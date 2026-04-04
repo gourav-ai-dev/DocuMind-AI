@@ -1,5 +1,5 @@
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
+from app.config import settings
 
 class DocumentProcessor:
 
@@ -10,9 +10,12 @@ class DocumentProcessor:
             raise Exception("Unsupported file format")
 
     def chunk_text(self, text: str):
+        chunk_size = settings.CHUNK_SIZE
+        overlap = settings.CHUNK_OVERLAP
+
         splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=50
+            chunk_size,
+            overlap
         )
         return splitter.split_text(text)
 
