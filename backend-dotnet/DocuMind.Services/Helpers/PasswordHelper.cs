@@ -1,9 +1,9 @@
-﻿namespace DocuMind.API.Helper
-{
-    using System.Security.Cryptography;
-    using System.Text;
+﻿using System.Security.Cryptography;
+using System.Text;
 
-    public static class PasswordHelper
+namespace DocuMind.Services.Helpers
+{
+    public class PasswordHelper
     {
         public static string HashPassword(string password)
         {

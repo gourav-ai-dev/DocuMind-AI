@@ -1,13 +1,15 @@
-﻿namespace DocuMind.API.Services
+﻿namespace DocuMind.Infrastructure.External.Services
 {
+    using DocuMind.Infrastructure.External.Interfaces;
+    using Microsoft.AspNetCore.Http;
     using System.Text;
     using System.Text.Json;
 
-    public class AIService
+    public class OllamaService : IAiService
     {
         private readonly HttpClient _httpClient;
 
-        public AIService(HttpClient httpClient)
+        public OllamaService(HttpClient httpClient)
         {
             _httpClient = httpClient;
         }
@@ -21,10 +23,7 @@
             content.Add(new StreamContent(fileStream), "file", file.FileName);
             content.Add(new StringContent(userId), "userId");
 
-            var response = await _httpClient.PostAsync(
-                "http://localhost:8000/api/upload",
-                content
-            );
+            var response = await _httpClient.PostAsync("http://127.0.0.1:8000/api/upload", content);
 
             return await response.Content.ReadAsStringAsync();
         }

@@ -1,4 +1,4 @@
-﻿namespace DocuMind.API.Models
+﻿namespace DocuMind.Common.Options
 {
     public class AISettings
     {

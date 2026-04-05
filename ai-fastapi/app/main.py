@@ -61,7 +61,7 @@ async def upload(file: UploadFile = File(...), userId: str = Form(...)):
 
     document_id = db_service.save_document(file_name, userId)
 
-    text = processor.extract_text(file_bytes)
+    text = processor.extract_text(file_bytes, file_name)
     chunks = processor.chunk_text(text)
 
     for chunk in chunks:

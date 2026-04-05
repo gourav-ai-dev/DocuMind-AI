@@ -17,7 +17,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\DocuMind.Common\DocuMind.Common.csproj" />
     <ProjectReference Include="..\DocuMind.Infrastructure\DocuMind.Infrastructure.csproj" />
+    <ProjectReference Include="..\DocuMind.Services\DocuMind.Services.csproj" />
   </ItemGroup>
 
 </Project>

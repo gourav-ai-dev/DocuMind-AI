@@ -1,13 +1,17 @@
-using DocuMind.API.Helper;
 using DocuMind.API.Models;
-using DocuMind.API.Services;
-using DocuMind.Domain.Entities;
+using DocuMind.Common.DTOs;
+using DocuMind.Common.Options;
 using DocuMind.Infrastructure;
-using Microsoft.EntityFrameworkCore;
-using System.Text;
-using System.Text.Json;
+using DocuMind.Infrastructure.External.Interfaces;
+using DocuMind.Infrastructure.External.Services;
+using DocuMind.Infrastructure.Interfaces;
+using DocuMind.Infrastructure.Repositories;
+using DocuMind.Services.Interfaces;
+using DocuMind.Services.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,8 +28,18 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddOpenApi();
-builder.Services.AddScoped<JwtService>();
-builder.Services.AddHttpClient<AIService>();
+
+builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
+builder.Services.AddScoped<IJwtService, JwtService>();
+
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IUserService, UserService>();
+
+builder.Services.AddScoped<IAIService, AIService>();
+builder.Services.AddHttpClient<IAiService, OllamaService>();
+
+builder.Services.AddScoped<IDocumentRepository, DocumentRepository>();
+builder.Services.AddScoped<IDocumentService, DocumentService>();
 
 builder.Services.AddDbContext<DocuMindDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -46,6 +60,16 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
             IssuerSigningKey = new SymmetricSecurityKey(key)
         };
+
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var token = context.Request.Cookies["accessToken"];
+                context.Token = token;
+                return Task.CompletedTask;
+            }
+        };
     });
 
 builder.Services.AddAuthorization();
@@ -60,65 +84,39 @@ app.UseAuthorization();
 app.MapGet("/api/health", () => Results.Ok(new { status = "ok" }));
 
 
-app.MapPost("/api/auth/register", async (RegisterRequest request, DocuMindDbContext db) =>
+app.MapPost("/api/auth/register", async (RegisterRequest request, IUserService userService) =>
 {
-    // Check if user exists
-    var existingUser = db.Users.FirstOrDefault(x => x.Email == request.Email);
-
-    if (existingUser != null)
-        return Results.BadRequest("User already exists");
-
-    var user = new User
-    {
-        Id = Guid.NewGuid(),
-        Email = request.Email,
-        PasswordHash = PasswordHelper.HashPassword(request.Password),
-        CreatedAt = DateTime.UtcNow
-    };
-
-    db.Users.Add(user);
-    await db.SaveChangesAsync();
-
-    return Results.Ok("User registered successfully");
+    var success = await userService.RegisterUserAsync(request);
+    return success ? Results.Ok("User registered successfully") : Results.BadRequest("User already exists");
 });
 
 app.MapPost("/api/auth/login", async (
     LoginRequest request,
-    DocuMindDbContext db,
-    JwtService jwtService) =>
+    IUserService userService,
+    HttpResponse response) =>
 {
-    var user = db.Users.FirstOrDefault(x => x.Email == request.Email);
+    var loginResult = await userService.LoginAsync(request);
+    if (loginResult == null) return Results.BadRequest("Invalid credentials");
 
-    if (user == null)
-        return Results.BadRequest("Invalid credentials");
+    var cookieOptions = new CookieOptions
+    {
+        HttpOnly = true,  
+        Secure = true,
+        SameSite = SameSiteMode.Strict,
+        Expires = DateTime.UtcNow.AddHours(2)
+    };
 
-    var hashed = PasswordHelper.HashPassword(request.Password);
-
-    if (user.PasswordHash != hashed)
-        return Results.BadRequest("Invalid credentials");
-
-    var token = jwtService.GenerateToken(user);
+    response.Cookies.Append("accessToken", loginResult.Token, cookieOptions);
 
     return Results.Ok(new
     {
-        token = token,
-        userId = user.Id
+        userId = loginResult.UserId
     });
 });
 
-app.MapGet("/api/test/user", (HttpContext httpContext) =>
-{
-    var userId = httpContext.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-
-    return Results.Ok(new
-    {
-        userId = userId
-    });
-}).RequireAuthorization();
-
 app.MapPost("/api/document/upload", async (
     HttpContext httpContext,
-    AIService aiService) =>
+    IAIService aiService) =>
 {
     var userId = httpContext.User
         .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
@@ -135,9 +133,42 @@ app.MapPost("/api/document/upload", async (
 
 }).RequireAuthorization();
 
+app.MapGet("/api/documents", async (
+    HttpContext httpContext,
+    IDocumentService service) =>
+{
+    var userId = httpContext.User
+        .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+
+    var result = await service.GetAllUserDocumentsAsync(userId);
+
+    return Results.Json(result);
+}).RequireAuthorization();
+
+app.MapDelete("/api/documents/{id:guid}", async (
+    Guid id,
+    HttpContext httpContext,
+    IDocumentService service) =>
+{
+    var userId = httpContext.User
+        .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+    if (string.IsNullOrEmpty(userId))
+        return Results.Unauthorized();
+
+    var success = await service.DeleteUserDocumentAsync(userId, id);
+
+    return success ? Results.Ok() : Results.NotFound();
+}).RequireAuthorization();
+
+
 app.MapPost("/api/ai/query", async (
     HttpContext httpContext,
-    AIService aiService,
+    IAIService aiService,
     QueryRequest request) =>
 {
     var userId = httpContext.User

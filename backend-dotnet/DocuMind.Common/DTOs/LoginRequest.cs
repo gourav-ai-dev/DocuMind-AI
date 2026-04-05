@@ -1,6 +1,6 @@
-﻿namespace DocuMind.API.Models
+﻿namespace DocuMind.Common.DTOs
 {
-    public class RegisterRequest
+    public class LoginRequest
     {
         public string Email { get; set; }
         public string Password { get; set; }
