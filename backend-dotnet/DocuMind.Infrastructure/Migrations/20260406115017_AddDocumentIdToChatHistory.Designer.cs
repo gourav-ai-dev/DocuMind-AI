@@ -4,6 +4,7 @@ using DocuMind.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DocuMind.Infrastructure.Migrations
 {
     [DbContext(typeof(DocuMindDbContext))]
-    partial class DocuMindDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260406115017_AddDocumentIdToChatHistory")]
+    partial class AddDocumentIdToChatHistory
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -46,8 +49,6 @@ namespace DocuMind.Infrastructure.Migrations
                         .HasColumnType("uniqueidentifier");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("DocumentId");
 
                     b.HasIndex("UserId");
 
@@ -125,19 +126,11 @@ namespace DocuMind.Infrastructure.Migrations
 
             modelBuilder.Entity("DocuMind.Domain.Entities.ChatHistory", b =>
                 {
-                    b.HasOne("DocuMind.Domain.Entities.Document", "Document")
-                        .WithMany("ChatHistories")
-                        .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
                     b.HasOne("DocuMind.Domain.Entities.User", "User")
                         .WithMany("ChatHistories")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("Document");
 
                     b.Navigation("User");
                 });
@@ -166,8 +159,6 @@ namespace DocuMind.Infrastructure.Migrations
 
             modelBuilder.Entity("DocuMind.Domain.Entities.Document", b =>
                 {
-                    b.Navigation("ChatHistories");
-
                     b.Navigation("Chunks");
                 });
 

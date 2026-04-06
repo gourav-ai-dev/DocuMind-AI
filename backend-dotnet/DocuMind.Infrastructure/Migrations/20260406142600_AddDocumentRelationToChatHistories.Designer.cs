@@ -4,6 +4,7 @@ using DocuMind.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DocuMind.Infrastructure.Migrations
 {
     [DbContext(typeof(DocuMindDbContext))]
-    partial class DocuMindDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260406142600_AddDocumentRelationToChatHistories")]
+    partial class AddDocumentRelationToChatHistories
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -128,13 +131,13 @@ namespace DocuMind.Infrastructure.Migrations
                     b.HasOne("DocuMind.Domain.Entities.Document", "Document")
                         .WithMany("ChatHistories")
                         .HasForeignKey("DocumentId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("DocuMind.Domain.Entities.User", "User")
-                        .WithMany("ChatHistories")
+                        .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Document");
@@ -173,8 +176,6 @@ namespace DocuMind.Infrastructure.Migrations
 
             modelBuilder.Entity("DocuMind.Domain.Entities.User", b =>
                 {
-                    b.Navigation("ChatHistories");
-
                     b.Navigation("Documents");
                 });
 #pragma warning restore 612, 618

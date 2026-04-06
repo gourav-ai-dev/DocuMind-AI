@@ -28,11 +28,12 @@
             return await response.Content.ReadAsStringAsync();
         }
 
-        public async Task<string> AskAI(string query, string userId)
+        public async Task<string> AskAI(string query, string documentId, string userId)
         {
             var payload = new
             {
                 query = query,
+                documentId = documentId,
                 userId = userId
             };
 

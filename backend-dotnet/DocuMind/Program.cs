@@ -174,9 +174,22 @@ app.MapPost("/api/ai/query", async (
     var userId = httpContext.User
         .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 
-    var result = await aiService.AskAI(request.Query, userId);
+    var result = await aiService.AskAI(request.Query, request.DocumentId, userId);
 
     return Results.Content(result, "application/json");
+}).RequireAuthorization();
+
+app.MapGet("/api/chat/{documentId}", async (
+    string documentId,
+    HttpContext httpContext,
+    IDocumentService service) =>
+{
+    var userId = httpContext.User
+        .FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+    var chats = await service.GetDocumentChatHistory(userId, documentId);
+
+    return Results.Ok(chats);
 }).RequireAuthorization();
 
 app.Run();

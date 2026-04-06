@@ -1,6 +1,7 @@
 ﻿namespace DocuMind.Infrastructure.Repositories
 {
     using DocuMind.Common.DTOs;
+    using DocuMind.Domain.Entities;
     using DocuMind.Infrastructure.Interfaces;
     using Microsoft.EntityFrameworkCore;
 
@@ -39,9 +40,23 @@
 
             if (doc == null) return false;
 
+            var chats = _context.ChatHistories.Where(c => c.DocumentId == documentId);
+
+            _context.ChatHistories.RemoveRange(chats);
+
             _context.Documents.Remove(doc);
             await _context.SaveChangesAsync();
             return true;
+        }
+
+        public async Task<List<ChatHistory>> GetDocumentChatHistory(string userId, string documentId)
+        {
+
+            var chat  = await _context.ChatHistories
+                .Where(x => x.UserId == Guid.Parse(userId) && x.DocumentId == Guid.Parse(documentId))
+                .OrderBy(x =>x .CreatedAt).ToListAsync();
+
+            return chat;
         }
     }
 }

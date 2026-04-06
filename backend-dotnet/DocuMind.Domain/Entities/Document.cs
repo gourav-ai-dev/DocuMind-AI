@@ -10,5 +10,7 @@
         public List<Chunk> Chunks { get; set; }
 
         public User User { get; set; }
+
+        public ICollection<ChatHistory> ChatHistories { get; set; }
     }
 }

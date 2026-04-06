@@ -12,9 +12,9 @@
            _aiService = aiService;
         }
 
-        public Task<string> AskAI(string query, string userId)
+        public Task<string> AskAI(string query, string documentId, string userId)
         {
-            return _aiService.AskAI(query, userId);
+            return _aiService.AskAI(query, documentId, userId);
         }
 
         public Task<string> UploadDocument(IFormFile file, string userId)

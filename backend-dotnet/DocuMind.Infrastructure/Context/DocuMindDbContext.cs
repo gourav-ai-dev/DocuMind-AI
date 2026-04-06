@@ -2,7 +2,6 @@
 {
     using DocuMind.Domain.Entities;
     using Microsoft.EntityFrameworkCore;
-    using System.Reflection.Metadata;
 
     public class DocuMindDbContext : DbContext
     {
@@ -13,16 +12,22 @@
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<Document>()
+                .HasOne(d => d.User)
+                .WithMany(u => u.Documents)
+                .HasForeignKey(d => d.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
             modelBuilder.Entity<ChatHistory>()
                 .HasOne(ch => ch.User)
                 .WithMany(u => u.ChatHistories)
                 .HasForeignKey(ch => ch.UserId)
-                .OnDelete(DeleteBehavior.Cascade);
+                .OnDelete(DeleteBehavior.Restrict);
 
-            modelBuilder.Entity<Domain.Entities.Document>()
-                .HasOne(d => d.User)
-                .WithMany(u => u.Documents)
-                .HasForeignKey(d => d.UserId)
+            modelBuilder.Entity<ChatHistory>()
+                .HasOne(ch => ch.Document)
+                .WithMany(d => d.ChatHistories)
+                .HasForeignKey(ch => ch.DocumentId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
 

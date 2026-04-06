@@ -4,6 +4,9 @@ from app.services.embedding_service import EmbeddingService
 from app.services.db_service import DBService
 from app.services.retrieval_service import RetrievalService
 from app.services.llm_service import LLMService
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 retrieval_service = RetrievalService()
 app = FastAPI()
@@ -19,24 +22,25 @@ def health():
 
 @app.post("/api/query")
 def query(data: dict):
+
     user_query = data.get("query", "")
     user_id = data.get("userId")
-    
+    document_id = data.get("documentId")
+
     query_embedding = embedding_service.generate_embedding(user_query)
 
-    relevant_chunks = retrieval_service.get_relevant_chunks(query_embedding, user_id=user_id)
+    relevant_chunks = retrieval_service.get_relevant_chunks(
+        query_embedding, user_id=user_id
+    )
 
     context = "\n".join(relevant_chunks)
 
-    recent_chats = db_service.get_recent_chats(user_id=user_id)
+    recent_chats = db_service.get_recent_chats(user_id=user_id, document_Id=document_id)
 
     conversation_context = ""
-
     for q, a in reversed(recent_chats):
         conversation_context += f"User: {q}\nAI: {a}\n"
 
-    context = "\n".join(relevant_chunks)
-    
     full_context = f"""
     Conversation History:
     {conversation_context}
@@ -45,9 +49,11 @@ def query(data: dict):
     {context}
     """
 
-    answer = llm_service.generate_answer(user_query, full_context)
+    answer = llm_service.generate_answer(user_query, context, conversation_context)
 
-    db_service.save_chat(user_query, answer, user_id)
+    
+    db_service.save_chat(user_query, answer, user_id, document_id)
+
 
     return {
         "query": user_query,
@@ -62,6 +68,8 @@ async def upload(file: UploadFile = File(...), userId: str = Form(...)):
     document_id = db_service.save_document(file_name, userId)
 
     text = processor.extract_text(file_bytes, file_name)
+    print(text[:2000])
+
     chunks = processor.chunk_text(text)
 
     for chunk in chunks:

@@ -86,15 +86,30 @@ export const api = {
     return true;
   },
 
-  askAI: async (query: string) => {
+  askAI: async (query: string, documentId: string) => {
     const res = await fetch(`${BASE_URL}/ai/query`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ query, documentId }),
       credentials: "include",
     });
+
     return res.json();
   },
+
+  getChatHistory: async (docId: string) => {
+    const res = await fetch(`${BASE_URL}/chat/${docId}`, {
+      method: "GET",
+      credentials: "include",
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to fetch chat history");
+    }
+
+    return res.json();
+  },
+
 };
