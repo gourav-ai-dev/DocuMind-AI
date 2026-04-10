@@ -5,16 +5,18 @@ from app.services.db_service import DBService
 from app.services.retrieval_service import RetrievalService
 from app.services.llm_service import LLMService
 import logging
+from app.services.vector_store_service import VectorStoreService
 
 logging.basicConfig(level=logging.INFO)
 
-retrieval_service = RetrievalService()
 app = FastAPI()
 
 processor = DocumentProcessor()
 embedding_service = EmbeddingService()
 db_service = DBService()
 llm_service = LLMService()
+vector_store = VectorStoreService()
+retrieval_service = RetrievalService(vector_store)
 
 @app.get("/api/health")
 def health():
@@ -30,33 +32,21 @@ def query(data: dict):
     query_embedding = embedding_service.generate_embedding(user_query)
 
     relevant_chunks = retrieval_service.get_relevant_chunks(
-        query_embedding, user_id=user_id
+        query_embedding, user_id=user_id, document_id=document_id
     )
-
-    context = "\n".join(relevant_chunks)
-
-    recent_chats = db_service.get_recent_chats(user_id=user_id, document_Id=document_id)
-
-    conversation_context = ""
-    for q, a in reversed(recent_chats):
-        conversation_context += f"User: {q}\nAI: {a}\n"
-
-    full_context = f"""
-    Conversation History:
-    {conversation_context}
     
-    Document Context:
-    {context}
-    """
+    unique_chunks = list(dict.fromkeys([c["content"] for c in relevant_chunks]))
+    context = "\n\n".join(unique_chunks[:3])
 
-    answer = llm_service.generate_answer(user_query, context, conversation_context)
-
+    recent_chats = db_service.get_recent_chats(user_id=user_id, document_Id=document_id)[-3:]
     
-    db_service.save_chat(user_query, answer, user_id, document_id)
+    chat_history = "\n".join([f"User: {q}\nAssistant: {a}" for q, a in recent_chats])
 
+    answer = llm_service.generate_answer(question=user_query,context= context, chat_history=chat_history)
+
+    db_service.save_chat(question=user_query, answer=answer, user_id=user_id, document_Id=document_id)
 
     return {
-        "query": user_query,
         "answer": answer
     }
 
@@ -67,13 +57,16 @@ async def upload(file: UploadFile = File(...), userId: str = Form(...)):
 
     document_id = db_service.save_document(file_name, userId)
 
-    text = processor.extract_text(file_bytes, file_name)
-    print(text[:2000])
-
-    chunks = processor.chunk_text(text)
+    chunks = processor.process_document(file_bytes, file_name)
 
     for chunk in chunks:
         embedding = embedding_service.generate_embedding(chunk)
         db_service.save_chunks(document_id, chunk, embedding)
+        vector_store.add_chunk(embedding=embedding,
+                               content=chunk,
+                               user_id=userId,
+                               document_id=document_id
+                               )
+        print("Stored in Qdrant:", chunk[:50])
 
     return {"message": "Document processed successfully"}

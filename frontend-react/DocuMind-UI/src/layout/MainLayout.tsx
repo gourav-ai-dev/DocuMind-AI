@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../services/api";
 import type { Document } from "../interfaces/Document";
 import "./MainLayout.css";
+import { FormattedMessage } from "../components/FormattedMessage";
 
 type Message = {
   type: "user" | "ai";
@@ -190,7 +191,8 @@ export default function MainLayout() {
               className={`message-row ${msg.type === "user" ? "user-row" : "ai-row"}`}
             >
               <div className={`message-bubble ${msg.type}`}>
-                {msg.text}
+                {/* {msg.text} */}
+                <FormattedMessage text={msg.text} />
               </div>
             </div>
           ))}

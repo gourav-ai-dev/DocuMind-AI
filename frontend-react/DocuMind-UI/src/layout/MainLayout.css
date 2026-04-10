@@ -116,3 +116,27 @@
     opacity: 1;
   }
 }
+
+
+.chat-area,
+.messages,
+.message-row {
+  min-width: 0 !important;
+  width: 100% !important;
+}
+
+.message-bubble {
+  min-width: 0 !important;
+  display: block;
+}
+
+.message-bubble pre {
+  max-width: 100% !important;
+  overflow-x: auto !important; 
+  white-space: pre !important; 
+  display: block !important;
+}
+
+.message-bubble * {
+  max-width: 100%;
+}

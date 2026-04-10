@@ -30,7 +30,7 @@ class Settings:
 
     LLM_MODEL = os.getenv(
         "LLM_MODEL",
-        "tinyllama"
+        "phi3"
     )
 
     # 🔥 Chunking

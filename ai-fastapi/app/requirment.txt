@@ -10,6 +10,9 @@ requests           # fastapi
 pdfplumber         # PDF text extraction
 python-docx        # DOCX text extraction
 chardet            # auto-detect text encoding
+qdrant-client      # Qdrant search
+openpyxl           # xlxs files
+# rank-bm25          # keyword based seach helper
 # pandas           # optional for CSV
 
 
