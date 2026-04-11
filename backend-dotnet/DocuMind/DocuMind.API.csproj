@@ -24,6 +24,7 @@
 
   <ItemGroup>
     <Folder Include="Api\Controllers\" />
+    <Folder Include="DocuMind.Tests\Services\" />
   </ItemGroup>
 
 </Project>
