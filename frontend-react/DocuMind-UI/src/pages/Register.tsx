@@ -29,7 +29,7 @@ export default function Register({ onSwitch }: any) {
     }
     setLoading(true)
     try {
-      const data = await api.register(email, password);
+      const data = await api.register(trimmedEmail, trimmedPassword);
       onSwitch();
 
     } catch (err) {
