@@ -13,6 +13,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocuMind.Services", "..\Doc
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocuMind.Common", "..\DocuMind.Common\DocuMind.Common.csproj", "{1975291E-8AEE-4128-A208-5CB894828546}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocuMind.Tests", "..\DocuMind.Tests\DocuMind.Tests.csproj", "{B6A09F23-FE3B-42F0-8D8E-44CBEF424F86}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -39,6 +41,10 @@ Global
 		{1975291E-8AEE-4128-A208-5CB894828546}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{1975291E-8AEE-4128-A208-5CB894828546}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{1975291E-8AEE-4128-A208-5CB894828546}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B6A09F23-FE3B-42F0-8D8E-44CBEF424F86}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B6A09F23-FE3B-42F0-8D8E-44CBEF424F86}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B6A09F23-FE3B-42F0-8D8E-44CBEF424F86}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B6A09F23-FE3B-42F0-8D8E-44CBEF424F86}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
