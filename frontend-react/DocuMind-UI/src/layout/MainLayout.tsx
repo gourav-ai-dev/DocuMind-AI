@@ -10,7 +10,6 @@ type Message = {
 };
 
 export default function MainLayout() {
-
   const [docs, setDocs] = useState<Document[]>([]);
   const [selectedDoc, setSelectedDoc] = useState<Document | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -47,25 +46,22 @@ export default function MainLayout() {
 
     setInput("");
 
-    setMessages(prev => [...prev, userMsg]);
+    setMessages((prev) => [...prev, userMsg]);
 
     try {
       setLoading(true);
 
       const res = await api.askAI(input, selectedDoc.id);
 
-      const aiText =
-        typeof res === "string" ? res : res.answer;
+      const aiText = typeof res === "string" ? res : res.answer;
 
       const aiMsg: Message = { type: "ai", text: aiText };
 
-      setMessages(prev => [...prev, aiMsg]);
-
+      setMessages((prev) => [...prev, aiMsg]);
     } catch (err) {
       console.error("AI error:", err);
     } finally {
       setLoading(false);
-
     }
 
     setInput("");
@@ -75,13 +71,12 @@ export default function MainLayout() {
     try {
       await api.deleteDoc(docId);
 
-      setDocs(prev => prev.filter(doc => doc.id !== docId));
+      setDocs((prev) => prev.filter((doc) => doc.id !== docId));
 
       if (selectedDoc?.id === docId) {
         setSelectedDoc(null);
         setMessages([]);
       }
-
     } catch (err) {
       console.error(err);
     }
@@ -100,7 +95,6 @@ export default function MainLayout() {
       setMessages([]);
 
       sidebarRef.current?.scrollTo({ top: 0, behavior: "smooth" });
-
     } catch (err) {
       console.error(err);
     } finally {
@@ -116,11 +110,10 @@ export default function MainLayout() {
 
       const formatted: Message[] = history.flatMap((chat: any) => [
         { type: "user", text: chat.question },
-        { type: "ai", text: chat.answer }
+        { type: "ai", text: chat.answer },
       ]);
 
       setMessages(formatted);
-
     } catch (err) {
       console.error("Failed to load chat:", err);
       setMessages([]);
@@ -129,11 +122,15 @@ export default function MainLayout() {
 
   return (
     <div className="layout">
-
       <div className="sidebar" ref={sidebarRef}>
         <h3>Documents</h3>
 
-        {loading && <p>Loading...</p>}
+        {loading && (
+          <div className="walking-loader">
+            <div className="boy">🚶‍♂️</div>
+            <p>Fetching documents...</p>
+          </div>
+        )}
 
         {docs.map((doc) => (
           <div
@@ -157,7 +154,6 @@ export default function MainLayout() {
       </div>
 
       <div className="chat-area">
-
         <div className="header">
           <span>{selectedDoc?.fileName || "Select a document"}</span>
 
@@ -175,12 +171,18 @@ export default function MainLayout() {
           />
 
           <button
+            className="upload-btn"
             disabled={uploading}
-            onClick={() =>
-              document.getElementById("fileUpload")?.click()
-            }
+            onClick={() => document.getElementById("fileUpload")?.click()}
           >
-            {uploading ? "Uploading..." : "Upload"}
+            {uploading ? (
+              <>
+                <span className="spinner"></span>
+                Uploading...
+              </>
+            ) : (
+              <>📤 Upload File</>
+            )}
           </button>
         </div>
 
@@ -188,7 +190,9 @@ export default function MainLayout() {
           {messages.map((msg, i) => (
             <div
               key={i}
-              className={`message-row ${msg.type === "user" ? "user-row" : "ai-row"}`}
+              className={`message-row ${
+                msg.type === "user" ? "user-row" : "ai-row"
+              }`}
             >
               <div className={`message-bubble ${msg.type}`}>
                 {/* {msg.text} */}
@@ -209,16 +213,23 @@ export default function MainLayout() {
           )}
         </div>
 
-        <div className="input-box">
-          <input
-            value={input}
-            placeholder="Ask something about document..."
-            onChange={(e) => setInput(e.target.value)}
-          />
+        <div className="input-wrapper">
+          <div className="input-box">
+            <input
+              value={input}
+              placeholder="Ask something about document..."
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey && input.trim()) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+            />
 
-          <button onClick={sendMessage}>Send</button>
+            <button onClick={sendMessage}>Send</button>
+          </div>
         </div>
-
       </div>
     </div>
   );

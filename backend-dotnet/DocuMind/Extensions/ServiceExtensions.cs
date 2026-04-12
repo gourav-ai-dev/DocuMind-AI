@@ -18,7 +18,10 @@
             services.AddScoped<IDocumentService, DocumentService>();
 
             services.AddScoped<IAIService, AIService>();
-            services.AddHttpClient<IAiService, OllamaService>();
+            services.AddHttpClient<IAiService, OllamaService>(client =>
+            {
+                client.Timeout = TimeSpan.FromMinutes(2);
+            }); ;
 
             return services;
         }

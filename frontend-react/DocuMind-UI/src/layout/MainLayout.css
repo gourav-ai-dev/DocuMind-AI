@@ -140,3 +140,145 @@
 .message-bubble * {
   max-width: 100%;
 }
+
+.upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.upload-btn:hover {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.upload-btn:active {
+  transform: translateY(0);
+}
+
+.upload-btn:disabled {
+  background: #a5b4fc;
+  cursor: not-allowed;
+}
+
+/* Spinner */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
+/* Wrapper to lift it up */
+.input-wrapper {
+  position: sticky;
+  bottom: 20px;
+  display: flex;
+  justify-content: center;
+  padding: 10px 0;
+}
+
+/* Main input container */
+.input-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  width: 90%;
+  max-width: 700px;
+
+  background: white;
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
+}
+
+/* Input field */
+.input-box input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  color: black;
+}
+
+/* Send button */
+.input-box button {
+  background: #4f46e5;
+  color: white;
+  border: none;
+
+  width: 80px;
+  height: 40px;
+  border-radius: 50%;
+
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Hover effect */
+.input-box button:hover {
+  background: #4338ca;
+  transform: scale(1.05);
+}
+
+/* Click effect */
+.input-box button:active {
+  transform: scale(0.95);
+}
+
+.walking-loader {
+  position: relative;
+  height: 60px;
+  overflow: hidden;
+  margin-top: 10px;
+}
+
+.boy {
+  position: absolute;
+  font-size: 28px;
+  animation: walk 3s linear infinite;
+
+  transform: scaleX(-1);
+}
+
+/* Move from left → right */
+@keyframes walk {
+  0% {
+    left: -30px;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
+/* Optional text */
+.walking-loader p {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 30px;
+}
