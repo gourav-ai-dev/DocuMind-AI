@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { api } from "../services/api";
 
-export default function Register({ onSwitch }: any) {
+type RegisterProps = {
+  onSwitch: () => void;
+};
+
+export default function Register({ onSwitch }: RegisterProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -27,15 +31,15 @@ export default function Register({ onSwitch }: any) {
       setError("Password must be at least 6 characters");
       return;
     }
-    setLoading(true)
+    setLoading(true);
     try {
-      const data = await api.register(trimmedEmail, trimmedPassword);
+      await api.register(trimmedEmail, trimmedPassword);
       onSwitch();
 
     } catch (err) {
-      setError("Registration failed. Please check your email and password.");
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   };
 

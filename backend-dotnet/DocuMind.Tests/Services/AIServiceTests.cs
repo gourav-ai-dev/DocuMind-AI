@@ -11,26 +11,6 @@
 
     public class AIServiceTests
     {
-        [Fact]
-        public async Task UploadDocument_ShouldReturnResult_WhenCalled()
-        {
-            // Arrange
-            var aiMock = new Mock<IAiService>();
-            var fileMock = new Mock<IFormFile>();
-
-            aiMock
-                .Setup(x => x.UploadDocument(fileMock.Object, "user123"))
-                .ReturnsAsync("uploaded-result");
-
-            var service = new AIService(aiMock.Object);
-
-            // Act
-            var result = await service.UploadDocument(fileMock.Object, "user123");
-
-            // Assert
-            result.Should().Be("uploaded-result");
-            aiMock.Verify(x => x.UploadDocument(fileMock.Object, "user123"), Times.Once);
-        }
 
         [Fact]
         public async Task AskAI_ShouldReturnResult_WhenCalled()

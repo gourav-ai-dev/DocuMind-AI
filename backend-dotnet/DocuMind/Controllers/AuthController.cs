@@ -21,8 +21,8 @@
             var success = await _userService.RegisterUserAsync(request);
 
             return success
-                ? Ok("User registered successfully")
-                : BadRequest("User already exists");
+                ? Ok(new { message = "User registered successfully" })
+                : BadRequest(new { message = "User already exists" });
         }
 
         [HttpPost("login")]

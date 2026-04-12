@@ -1,8 +1,6 @@
 ﻿namespace DocuMind.API.Controllers
 {
     using DocuMind.API.Models;
-    using DocuMind.Common.DTOs;
-    using DocuMind.Infrastructure.External.Interfaces;
     using DocuMind.Services.Interfaces;
     using Microsoft.AspNetCore.Authorization;
     using Microsoft.AspNetCore.Mvc;
@@ -35,23 +33,7 @@
                 request.DocumentId,
                 userId
             );
-
             return Content(result, "application/json");
-        }
-
-        [HttpPost("upload")]
-        public async Task<IActionResult> Upload()
-        {
-            var userId = GetUserId();
-
-            var file = Request.Form.Files.FirstOrDefault();
-
-            if (file == null)
-                return BadRequest("No file uploaded");
-
-            var result = await _aiService.UploadDocument(file, userId);
-
-            return Ok(result);
         }
     }
 }

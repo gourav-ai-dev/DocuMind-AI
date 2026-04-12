@@ -2,21 +2,45 @@
 {
     using DocuMind.Common.DTOs;
     using DocuMind.Domain.Entities;
+    using DocuMind.Infrastructure.External.Interfaces;
     using DocuMind.Infrastructure.Interfaces;
+    using DocuMind.Services.Interfaces;
     using DocuMind.Services.Services;
     using FluentAssertions;
+    using Microsoft.AspNetCore.Http;
     using Moq;
     using Xunit;
 
     public class DocumentServiceTests
     {
         private readonly Mock<IDocumentRepository> _repoMock;
+        private readonly Mock<IAiService> _aIService;
         private readonly DocumentService _service;
 
         public DocumentServiceTests()
         {
             _repoMock = new Mock<IDocumentRepository>();
-            _service = new DocumentService(_repoMock.Object);
+            _aIService = new Mock<IAiService>();
+            _service = new DocumentService(_repoMock.Object, _aIService.Object);
+        }
+
+        [Fact]
+        public async Task UploadDocument_ShouldReturnResult_WhenCalled()
+        {
+            // Arrange
+            var fileMock = new Mock<IFormFile>();
+
+            _aIService
+                .Setup(x => x.UploadDocument(fileMock.Object, "user123"))
+                .ReturnsAsync("uploaded-result");
+
+
+            // Act
+            var result = await _service.UploadDocument(fileMock.Object, "user123");
+
+            // Assert
+            result.Should().Be("uploaded-result");
+            _aIService.Verify(x => x.UploadDocument(fileMock.Object, "user123"), Times.Once);
         }
 
         [Fact]

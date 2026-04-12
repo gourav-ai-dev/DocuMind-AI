@@ -12,6 +12,7 @@
     {
         private readonly IDocumentService _service;
 
+
         public DocumentsController(IDocumentService service)
         {
             _service = service;
@@ -53,6 +54,21 @@
             var chats = await _service.GetDocumentChatHistory(userId, documentId);
 
             return Ok(chats);
+        }
+
+        [HttpPost("upload")]
+        public async Task<IActionResult> Upload()
+        {
+            var userId = GetUserId();
+
+            var file = Request.Form.Files.FirstOrDefault();
+
+            if (file == null)
+                return BadRequest("No file uploaded");
+
+            var result = await _service.UploadDocument(file, userId);
+
+            return Ok(result);
         }
     }
 }

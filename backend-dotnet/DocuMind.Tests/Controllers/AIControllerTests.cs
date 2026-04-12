@@ -39,56 +39,6 @@
         }
 
         [Fact]
-        public async Task Upload_ShouldReturnOk_WhenFileIsValid()
-        {
-            // Arrange
-            var userId = "123";
-            SetUser(userId);
-
-            var content = "Hello world";
-            var fileName = "test.txt";
-
-            var stream = new MemoryStream(Encoding.UTF8.GetBytes(content));
-
-            var file = new FormFile(stream, 0, stream.Length, "file", fileName)
-            {
-                Headers = new HeaderDictionary(),
-                ContentType = "text/plain"
-            };
-
-            _aiServiceMock
-                .Setup(x => x.UploadDocument(file, userId))
-                .ReturnsAsync("uploaded");
-
-            _controller.ControllerContext.HttpContext.Request.Form =
-                new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(),
-                new FormFileCollection { file });
-
-            // Act
-            var result = await _controller.Upload();
-
-            // Assert
-            result.Should().BeOfType<OkObjectResult>();
-        }
-
-        [Fact]
-        public async Task Upload_ShouldReturnBadRequest_WhenNoFile()
-        {
-            // Arrange
-            SetUser("123");
-
-            _controller.ControllerContext.HttpContext.Request.Form =
-                new FormCollection(new Dictionary<string, Microsoft.Extensions.Primitives.StringValues>(),
-                new FormFileCollection());
-
-            // Act
-            var result = await _controller.Upload();
-
-            // Assert
-            result.Should().BeOfType<BadRequestObjectResult>();
-        }
-
-        [Fact]
         public async Task Query_ShouldReturnContent_WhenValidRequest()
         {
             // Arrange

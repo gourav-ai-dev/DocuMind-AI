@@ -19,8 +19,10 @@ class Settings:
 
     EMBEDDING_MODEL = os.getenv(
         "EMBEDDING_MODEL",
-        "nomic-embed-text"
+        "mxbai-embed-large"
     )
+    
+    VECTOR_SIZE = int(os.getenv("VECTOR_SIZE", 1024))
 
     # 🔥 LLM
     LLM_URL = os.getenv(
@@ -30,7 +32,7 @@ class Settings:
 
     LLM_MODEL = os.getenv(
         "LLM_MODEL",
-        "phi3"
+        "qwen3:14b"
     )
 
     # 🔥 Chunking

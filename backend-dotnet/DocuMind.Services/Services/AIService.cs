@@ -16,10 +16,5 @@
         {
             return _aiService.AskAI(query, documentId, userId);
         }
-
-        public Task<string> UploadDocument(IFormFile file, string userId)
-        {
-            return _aiService.UploadDocument(file, userId);
-        }
     }
 }

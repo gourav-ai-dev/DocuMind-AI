@@ -28,3 +28,6 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Qdrant local storage
+qdrant_data/

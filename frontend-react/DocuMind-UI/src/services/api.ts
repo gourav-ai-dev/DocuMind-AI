@@ -59,7 +59,7 @@ export const api = {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`${BASE_URL}/document/upload`, {
+    const res = await fetch(`${BASE_URL}/documents/upload`, {
       method: "POST",
       body: formData,
       credentials: "include",
@@ -100,7 +100,7 @@ export const api = {
   },
 
   getChatHistory: async (docId: string) => {
-    const res = await fetch(`${BASE_URL}/chat/${docId}`, {
+    const res = await fetch(`${BASE_URL}/documents/chat/${docId}`, {
       method: "GET",
       credentials: "include",
     });
