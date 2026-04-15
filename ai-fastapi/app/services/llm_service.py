@@ -3,10 +3,14 @@ from app.config import settings
 import re
 
 class LLMService:
-   
-   def generate_answer(self, question: str, context: str, chat_history: str):
 
-    prompt = f"""
+    def __init__(self):
+        self.session = requests.Session()
+        self.timeout = settings.REQUEST_TIMEOUT_SECONDS
+   
+    def generate_answer(self, question: str, context: str, chat_history: str):
+
+        prompt = f"""
 ### ROLE
 You are a witty, slightly sarcastic, but highly brilliant Expert Assistant. Your job is to answer the Question using the Context provided. Think of yourself as a helpful peer who has read the document and is now explaining it over a cup of coffee.
 
@@ -32,39 +36,18 @@ QUESTION:
 
 ### RESPONSE:
 """
-    
-#     prompt = f"""
-#     You are a precise AI assistant.
 
-#     RULES:
-#     - Answer ONLY from the provided context
-#     - Do NOT include labels like "Context:", etc.
-#     - Do NOT mention chat history or context
-#     - If not found, reply exactly: I don't know
+        response = self.session.post(settings.LLM_URL, json={
+            "model": settings.LLM_MODEL,
+            "prompt": prompt,
+            "stream": False,
+            "options": {
+                "temperature": 0.4
+            }
+        }, timeout=self.timeout)
 
-#     CONTEXT:
-#     {context}
-
-#     CHAT HISTORY:
-#     {chat_history}
-
-#     QUESTION:
-#     {question}
-    
-# """
-
-    response = requests.post(settings.LLM_URL, json={
-        "model": settings.LLM_MODEL,
-        "prompt": prompt,
-        "stream": False,
-        "options": {
-            "temperature": 0.7
-        }
-    })
-
-    response.raise_for_status()
-    data = response.json()
-    raw_content = data.get("response", "")
-    clean_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
-    print(f"response from llm - {clean_content}")
-    return clean_content
+        response.raise_for_status()
+        data = response.json()
+        raw_content = data.get("response", "")
+        clean_content = re.sub(r'<think>.*?</think>', '', raw_content, flags=re.DOTALL).strip()
+        return clean_content

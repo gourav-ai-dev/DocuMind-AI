@@ -20,7 +20,7 @@
             services.AddScoped<IAIService, AIService>();
             services.AddHttpClient<IAiService, OllamaService>(client =>
             {
-                client.Timeout = TimeSpan.FromMinutes(2);
+                client.Timeout = TimeSpan.FromMinutes(20);
             }); ;
 
             return services;

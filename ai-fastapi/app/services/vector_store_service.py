@@ -16,6 +16,9 @@ class VectorStoreService:
             )
 
     def add_chunk(self, embedding, content, user_id, document_id):
+        self.add_chunks([embedding], [content], user_id, document_id)
+
+    def add_chunks(self, embeddings, contents, user_id, document_id):
         self.client.upsert(
             collection_name=self.collection_name,
             points=[
@@ -28,6 +31,7 @@ class VectorStoreService:
                         "document_id": document_id
                     }
                 )
+                for embedding, content in zip(embeddings, contents)
             ]
         )
 

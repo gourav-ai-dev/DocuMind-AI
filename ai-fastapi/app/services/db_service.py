@@ -1,5 +1,6 @@
 import pyodbc
 import json
+import uuid
 from datetime import datetime
 from app.config import settings
 
@@ -13,7 +14,7 @@ class DBService:
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        doc_id = str(__import__("uuid").uuid4())
+        doc_id = str(uuid.uuid4())
 
         cursor.execute(
             "INSERT INTO Documents (Id, FileName, CreatedAt, UserId) VALUES (?, ?, ?, ?)",
@@ -29,15 +30,18 @@ class DBService:
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        for chunk, embedding in zip(chunks, embeddings):
-            chunk_id = str(__import__("uuid").uuid4())
+        if isinstance(chunks, str):
+            chunk_records = [(chunks, embeddings)]
+        else:
+            chunk_records = list(zip(chunks, embeddings))
 
+        for chunk, embedding in chunk_records:
             cursor.execute(
                 "INSERT INTO Chunks (Id, DocumentId, Content, Embedding) VALUES (?, ?, ?, ?)",
-                chunk_id,
+                str(uuid.uuid4()),
                 document_id,
                 chunk,
-                json.dumps(embedding)  # store as JSON
+                json.dumps(embedding)
             )
 
         conn.commit()
@@ -48,7 +52,7 @@ class DBService:
         conn = self.get_connection()
         cursor = conn.cursor()
 
-        chat_id = str(__import__("uuid").uuid4())
+        chat_id = str(uuid.uuid4())
 
         cursor.execute(
             "INSERT INTO Chathistories (Id, UserId, DocumentId, Question, Answer, CreatedAt) VALUES (?, ?, ?, ?, ?, ?)",

@@ -6,7 +6,7 @@ class Settings:
     DB_CONNECTION = os.getenv(
         "DB_CONNECTION",
         "Driver={ODBC Driver 17 for SQL Server};"
-        "Server=(localdb)\MSSQLLocalDB;"
+        r"Server=(localdb)\MSSQLLocalDB;"
         "Database=DocuMindDB;"
         "Trusted_Connection=yes;"
     )
@@ -33,6 +33,30 @@ class Settings:
     LLM_MODEL = os.getenv(
         "LLM_MODEL",
         "qwen3:14b"
+    )
+
+    REQUEST_TIMEOUT_SECONDS = float(
+        os.getenv("REQUEST_TIMEOUT_SECONDS", "120")
+    )
+
+    ENABLE_OBSERVABILITY = os.getenv(
+        "ENABLE_OBSERVABILITY",
+        "false"
+    ).lower() == "true"
+
+    ENABLE_PHOENIX_UI = os.getenv(
+        "ENABLE_PHOENIX_UI",
+        "false"
+    ).lower() == "true"
+
+    ENABLE_LLM_EVALUATION = os.getenv(
+        "ENABLE_LLM_EVALUATION",
+        "false"
+    ).lower() == "true"
+
+    OTLP_TRACES_ENDPOINT = os.getenv(
+        "OTLP_TRACES_ENDPOINT",
+        "http://127.0.0.1:6006/v1/traces"
     )
 
     # 🔥 Chunking
