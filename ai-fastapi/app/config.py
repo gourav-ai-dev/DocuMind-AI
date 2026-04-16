@@ -41,17 +41,17 @@ class Settings:
 
     ENABLE_OBSERVABILITY = os.getenv(
         "ENABLE_OBSERVABILITY",
-        "false"
+        "true"
     ).lower() == "true"
 
     ENABLE_PHOENIX_UI = os.getenv(
         "ENABLE_PHOENIX_UI",
-        "false"
+        "true"
     ).lower() == "true"
 
     ENABLE_LLM_EVALUATION = os.getenv(
         "ENABLE_LLM_EVALUATION",
-        "false"
+        "true"
     ).lower() == "true"
 
     OTLP_TRACES_ENDPOINT = os.getenv(

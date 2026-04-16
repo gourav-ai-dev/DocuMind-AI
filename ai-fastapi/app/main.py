@@ -2,6 +2,7 @@ from fastapi import FastAPI, UploadFile, File, Form
 import logging
 import asyncio
 from opentelemetry import trace
+from opentelemetry.trace import SpanKind
 
 from app.services.document_processor import DocumentProcessor
 from app.services.embedding_service import EmbeddingService
@@ -49,26 +50,33 @@ async def query(data: dict):
 
     active_tracer = get_tracer()
 
-    with active_tracer.start_as_current_span("rag_pipeline") as main_span:
+    with active_tracer.start_as_current_span("POST /api/query", kind=SpanKind.SERVER) as main_span:
 
         try:
             import uuid
             request_id = str(uuid.uuid4())
             main_span.set_attribute("request.id", request_id)
+            main_span.set_attribute("http.method", "POST")
+            main_span.set_attribute("http.route", "/api/query")
+            main_span.set_attribute("span.kind", "server")
 
             user_query = data.get("query", "")
             user_id = data.get("userId")
             document_id = data.get("documentId")
 
             main_span.set_attribute("user.query", user_query)
+            if user_id:
+                main_span.set_attribute("user.id", user_id)
+            if document_id:
+                main_span.set_attribute("document.id", document_id)
 
-            with active_tracer.start_as_current_span("embedding"):
+            with active_tracer.start_as_current_span("rag.embedding"):
                 query_embedding = await asyncio.to_thread(
                     embedding_service.generate_embedding,
                     user_query
                 )
 
-            with active_tracer.start_as_current_span("retrieval") as retrieval_span:
+            with active_tracer.start_as_current_span("rag.retrieval") as retrieval_span:
                 relevant_chunks = await asyncio.to_thread(
                     retrieval_service.get_relevant_chunks,
                     query_embedding,
@@ -82,7 +90,7 @@ async def query(data: dict):
                 retrieval_span.set_attribute("rag.chunk_count", len(unique_chunks))
                 retrieval_span.set_attribute("rag.context_preview", context[:500])
 
-            with active_tracer.start_as_current_span("chat_history"):
+            with active_tracer.start_as_current_span("rag.chat_history"):
                 recent_chats = await asyncio.to_thread(
                     db_service.get_recent_chats,
                     user_id,
@@ -95,22 +103,29 @@ async def query(data: dict):
                     [f"User: {q}\nAssistant: {a}" for q, a in recent_chats]
                 )
 
-            with active_tracer.start_as_current_span("llm_call") as span:
+            with active_tracer.start_as_current_span("rag.llm_call") as span:
                 
                 span.set_attribute("openinference.span.kind", "LLM")
                 span.set_attribute("input.value", user_query[:1000])
                 span.set_attribute("rag.context_length", len(context))
 
-                answer = await asyncio.to_thread(
+                llm_result = await asyncio.to_thread(
                     observer.get_final_answer,
                     user_query,
                     context,
                     chat_history,
                     active_tracer
                 )
+                answer = llm_result["answer"]
+                evaluation = llm_result["evaluation"]
                 
                 span.set_attribute("output.value", answer[:1000])
                 span.set_attribute("llm.model_name", "qwen3:14b")
+                span.set_attribute("eval.relevance", evaluation["relevance"])
+                span.set_attribute("eval.groundedness", evaluation["groundedness"])
+                span.set_attribute("eval.hallucination", evaluation["hallucination"])
+                span.set_attribute("eval.reason", evaluation["reason"][:500])
+                span.set_attribute("retry.used", llm_result["retry_used"])
 
             await asyncio.to_thread(
                 db_service.save_chat,
@@ -120,7 +135,11 @@ async def query(data: dict):
                 document_id
             )
 
-            return {"answer": answer}
+            return {
+                "answer": answer,
+                "evaluation": evaluation,
+                "retryUsed": llm_result["retry_used"],
+            }
 
         except Exception as e:
             main_span.record_exception(e)
@@ -134,27 +153,30 @@ async def upload(file: UploadFile = File(...), userId: str = Form(...)):
 
     active_tracer = get_tracer()
 
-    with active_tracer.start_as_current_span("document_upload") as main_span:
+    with active_tracer.start_as_current_span("POST /api/upload", kind=SpanKind.SERVER) as main_span:
 
         try:
             file_bytes = await file.read()
             file_name = file.filename
 
+            main_span.set_attribute("http.method", "POST")
+            main_span.set_attribute("http.route", "/api/upload")
+            main_span.set_attribute("span.kind", "server")
             main_span.set_attribute("file.name", file_name)
             main_span.set_attribute("user.id", userId)
 
-            with active_tracer.start_as_current_span("save_document"):
+            with active_tracer.start_as_current_span("upload.save_document"):
                 document_id = await asyncio.to_thread(
                     db_service.save_document,
                     file_name,
                     userId
                 )
 
-            with active_tracer.start_as_current_span("document_processing") as proc_span:
+            with active_tracer.start_as_current_span("upload.document_processing") as proc_span:
                 chunks = processor.process_document(file_bytes, file_name)
                 proc_span.set_attribute("chunk.count", len(chunks))
 
-            with active_tracer.start_as_current_span("embedding_and_storage") as span:
+            with active_tracer.start_as_current_span("upload.embedding_and_storage") as span:
                 embeddings = []
 
                 for chunk in chunks:

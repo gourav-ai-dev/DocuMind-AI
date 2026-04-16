@@ -41,10 +41,6 @@ class LLMObserver:
         return self.tracer
 
     def evaluate(self, question, context, answer):
-        """
-        Run LLM-based evaluation
-        """
-
         eval_prompt = f"""
 You are an evaluator.
 
@@ -71,12 +67,64 @@ Return JSON:
         return self.llm_service.generate_answer(
             question=eval_prompt, context="", chat_history=""
         )
+
+    def _default_evaluation(self):
+        return {
+            "relevance": 0.0,
+            "groundedness": 0.0,
+            "hallucination": False,
+            "reason": "Evaluation not executed"
+        }
+
+    def _parse_score(self, value):
+        try:
+            score = float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+        return max(0.0, min(1.0, score))
+
+    def _parse_bool(self, value):
+        if isinstance(value, bool):
+            return value
+
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "yes", "1"}:
+                return True
+            if normalized in {"false", "no", "0"}:
+                return False
+
+        return bool(value)
+
+    def _normalize_evaluation(self, evaluation):
+        normalized = self._default_evaluation()
+        normalized.update({
+            "relevance": self._parse_score(evaluation.get("relevance")),
+            "groundedness": self._parse_score(evaluation.get("groundedness")),
+            "hallucination": self._parse_bool(evaluation.get("hallucination")),
+            "reason": str(evaluation.get("reason") or normalized["reason"]),
+        })
+        return normalized
+
+    def _set_evaluation_attributes(self, span, evaluation):
+        span.set_attribute("eval.relevance", evaluation["relevance"])
+        span.set_attribute("eval.groundedness", evaluation["groundedness"])
+        span.set_attribute("eval.hallucination", evaluation["hallucination"])
+        span.set_attribute("eval.reason", evaluation["reason"][:500])
+
+    def _should_run_evaluation(self, context, answer):
+        return bool(settings.ENABLE_LLM_EVALUATION and context and len(answer) > 100)
+
+    def _should_retry(self, evaluation):
+        return evaluation.get("hallucination") or evaluation.get("groundedness", 0.0) < 0.5
         
     def get_final_answer(self, question, context, chat_history, tracer):
-        parsed_eval = {
-            "groundedness": 1,
-            "hallucination": False,
-        }
+        evaluation = self._default_evaluation()
+        evaluation["relevance"] = 1.0 if context else 0.0
+        evaluation["groundedness"] = 1.0
+        evaluation["reason"] = "Evaluation skipped"
+        retry_used = False
 
         with tracer.start_as_current_span("llm_pipeline") as span:
 
@@ -89,16 +137,29 @@ Return JSON:
             span.set_attribute("llm.answer_preview", answer[:300])
 
             if len(answer) < 50:
-                return answer
+                evaluation["reason"] = "Answer too short for evaluation"
+                self._set_evaluation_attributes(span, evaluation)
+                return {
+                    "answer": answer,
+                    "evaluation": evaluation,
+                    "retry_used": retry_used,
+                }
 
-            if settings.ENABLE_LLM_EVALUATION and context and len(answer) > 100:
+            if self._should_run_evaluation(context, answer):
 
-                eval_result = self.evaluate(question, context, answer)
-                parsed_eval = self.parse_eval(eval_result)
+                with tracer.start_as_current_span("llm_evaluation") as eval_span:
+                    eval_result = self.evaluate(question, context, answer)
+                    evaluation = self.parse_eval(eval_result)
+                    self._set_evaluation_attributes(eval_span, evaluation)
 
-                span.set_attribute("eval.result", str(parsed_eval))
+                self._set_evaluation_attributes(span, evaluation)
 
-            if parsed_eval.get("hallucination") or parsed_eval.get("groundedness", 0) < 0.5:
+            else:
+                self._set_evaluation_attributes(span, evaluation)
+
+            if self._should_retry(evaluation):
+
+                retry_used = True
 
                 retry_prompt = f"""Answer ONLY using the provided context.
         Do NOT add extra information.
@@ -119,18 +180,33 @@ Return JSON:
                 span.set_attribute("retry.used", True)
                 span.set_attribute("retry.preview", improved_answer[:300])
 
-                return improved_answer
+                answer = improved_answer
 
-        return answer
+        return {
+            "answer": answer,
+            "evaluation": evaluation,
+            "retry_used": retry_used,
+        }
     
     
     def parse_eval(self, eval_result):
         try:
-            return json.loads(eval_result)
+            cleaned = eval_result.strip()
+            if cleaned.startswith("```"):
+                cleaned = cleaned.strip("`")
+                if cleaned.lower().startswith("json"):
+                    cleaned = cleaned[4:].strip()
+
+            start = cleaned.find("{")
+            end = cleaned.rfind("}")
+            if start != -1 and end != -1:
+                cleaned = cleaned[start:end + 1]
+
+            return self._normalize_evaluation(json.loads(cleaned))
         except Exception:
-            return {
-                "relevance": 0,
-                "groundedness": 0,
+            fallback = self._default_evaluation()
+            fallback.update({
                 "hallucination": True,
                 "reason": "Failed to parse evaluation"
-            }
+            })
+            return fallback
