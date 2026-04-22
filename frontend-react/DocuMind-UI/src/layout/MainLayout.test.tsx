@@ -14,6 +14,18 @@ vi.mock('../components/FormattedMessage', () => ({
 
 const mockApi = apiModule as any;
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void;
+  let reject!: (reason?: unknown) => void;
+
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+
+  return { promise, resolve, reject };
+};
+
 describe('MainLayout Component', () => {
   const mockDocs = [
     { id: '1', fileName: 'Document1.pdf' },
@@ -41,7 +53,7 @@ describe('MainLayout Component', () => {
 
       render(<MainLayout />);
 
-      expect(screen.getByText('Loading...')).toBeInTheDocument();
+      expect(screen.getByText('Fetching documents...')).toBeInTheDocument();
     });
 
     it('should fetch and display documents on mount', async () => {
@@ -243,6 +255,90 @@ describe('MainLayout Component', () => {
       });
 
       consoleSpy.mockRestore();
+    });
+
+    it('should keep a pending question visible when switching documents', async () => {
+      const deferredResponse = createDeferred<{ answer: string }>();
+
+      mockApi.api.allDocs.mockResolvedValueOnce(mockDocs);
+      mockApi.api.getChatHistory
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      mockApi.api.askAI.mockReturnValueOnce(deferredResponse.promise);
+
+      render(<MainLayout />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Document1.pdf')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Document1.pdf').closest('.doc-item')!);
+
+      const input = screen.getByPlaceholderText('Ask something about document...') as HTMLInputElement;
+      await userEvent.type(input, 'Pending question');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      await waitFor(() => {
+        expect(screen.getByText('Pending question')).toBeInTheDocument();
+        expect(mockApi.api.askAI).toHaveBeenCalledWith('Pending question', '1');
+      });
+
+      fireEvent.click(screen.getByText('Document2.pdf').closest('.doc-item')!);
+
+      await waitFor(() => {
+        expect(mockApi.api.getChatHistory).toHaveBeenCalledWith('2');
+      });
+
+      fireEvent.click(screen.getByText('Document1.pdf').closest('.doc-item')!);
+
+      await waitFor(() => {
+        expect(mockApi.api.getChatHistory).toHaveBeenCalledWith('1');
+        expect(screen.getByText('Pending question')).toBeInTheDocument();
+      });
+
+      deferredResponse.resolve({ answer: 'Completed answer' });
+
+      await waitFor(() => {
+        expect(screen.getByText('Completed answer')).toBeInTheDocument();
+      });
+    });
+
+    it('should show typing indicator only for the document with a pending AI response', async () => {
+      const deferredResponse = createDeferred<{ answer: string }>();
+
+      mockApi.api.allDocs.mockResolvedValueOnce(mockDocs);
+      mockApi.api.getChatHistory
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]);
+      mockApi.api.askAI.mockReturnValueOnce(deferredResponse.promise);
+
+      render(<MainLayout />);
+
+      await waitFor(() => {
+        expect(screen.getByText('Document1.pdf')).toBeInTheDocument();
+      });
+
+      fireEvent.click(screen.getByText('Document1.pdf').closest('.doc-item')!);
+
+      const input = screen.getByPlaceholderText('Ask something about document...') as HTMLInputElement;
+      await userEvent.type(input, 'Loader test');
+
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+
+      await waitFor(() => {
+        expect(document.querySelector('.typing')).not.toBeNull();
+      });
+
+      fireEvent.click(screen.getByText('Document2.pdf').closest('.doc-item')!);
+
+      await waitFor(() => {
+        expect(mockApi.api.getChatHistory).toHaveBeenCalledWith('2');
+        expect(document.querySelector('.typing')).toBeNull();
+      });
+
+      deferredResponse.resolve({ answer: 'Done' });
     });
   });
 
