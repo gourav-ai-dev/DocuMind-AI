@@ -1,8 +1,11 @@
+import json
 from fastapi import FastAPI, UploadFile, File, Form
 import logging
 import asyncio
 from opentelemetry import trace
 from opentelemetry.trace import SpanKind
+from openinference.semconv.trace import SpanAttributes
+from openinference.semconv.trace import OpenInferenceSpanKindValues
 
 from app.services.document_processor import DocumentProcessor
 from app.services.embedding_service import EmbeddingService
@@ -70,11 +73,14 @@ async def query(data: dict):
             if document_id:
                 main_span.set_attribute("document.id", document_id)
 
-            with active_tracer.start_as_current_span("rag.embedding"):
+            with active_tracer.start_as_current_span("rag.embedding") as embedding_span:
                 query_embedding = await asyncio.to_thread(
                     embedding_service.generate_embedding,
                     user_query
                 )
+                embedding_span.set_attribute("embedding.generated", True)
+                embedding_span.set_attribute("embedding.vector_size", len(query_embedding))
+                embedding_span.set_attribute("embedding.vector_preview", str(query_embedding[:5]))
 
             with active_tracer.start_as_current_span("rag.retrieval") as retrieval_span:
                 relevant_chunks = await asyncio.to_thread(
@@ -85,12 +91,14 @@ async def query(data: dict):
                 )
 
                 unique_chunks = list(dict.fromkeys([c["content"] for c in relevant_chunks]))
-                context = "\n\n".join(unique_chunks[:3])
+                context = "\n\n".join(unique_chunks)
 
                 retrieval_span.set_attribute("rag.chunk_count", len(unique_chunks))
-                retrieval_span.set_attribute("rag.context_preview", context[:500])
+                retrieval_span.set_attribute("retrieval.document_count", len(relevant_chunks))
+                retrieval_span.set_attribute("rag.context_preview", context[:2000])
 
-            with active_tracer.start_as_current_span("rag.chat_history"):
+
+            with active_tracer.start_as_current_span("rag.chat_history") as chat_history_span:
                 recent_chats = await asyncio.to_thread(
                     db_service.get_recent_chats,
                     user_id,
@@ -102,12 +110,14 @@ async def query(data: dict):
                 chat_history = "\n".join(
                     [f"User: {q}\nAssistant: {a}" for q, a in recent_chats]
                 )
+                
+                chat_history_span.set_attribute("rag.chat_history_count", len(recent_chats))
+                chat_history_span.set_attribute("rag.chat_history_preview", chat_history[:2000])
 
             with active_tracer.start_as_current_span("rag.llm_call") as span:
                 
-                span.set_attribute("openinference.span.kind", "LLM")
-                span.set_attribute("input.value", user_query[:1000])
-                span.set_attribute("rag.context_length", len(context))
+                span.set_attribute(SpanAttributes.OPENINFERENCE_SPAN_KIND, OpenInferenceSpanKindValues.LLM.value)
+                span.set_attribute(SpanAttributes.INPUT_VALUE, user_query)
 
                 llm_result = await asyncio.to_thread(
                     observer.get_final_answer,
@@ -119,12 +129,12 @@ async def query(data: dict):
                 answer = llm_result["answer"]
                 evaluation = llm_result["evaluation"]
                 
-                span.set_attribute("output.value", answer[:1000])
+                span.set_attribute(SpanAttributes.OUTPUT_VALUE, answer)
                 span.set_attribute("llm.model_name", "qwen3:14b")
                 span.set_attribute("eval.relevance", evaluation["relevance"])
                 span.set_attribute("eval.groundedness", evaluation["groundedness"])
                 span.set_attribute("eval.hallucination", evaluation["hallucination"])
-                span.set_attribute("eval.reason", evaluation["reason"][:500])
+                span.set_attribute("eval.reason", evaluation["reason"][:2000])
                 span.set_attribute("retry.used", llm_result["retry_used"])
 
             await asyncio.to_thread(

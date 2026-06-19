@@ -56,7 +56,7 @@ class Settings:
 
     OTLP_TRACES_ENDPOINT = os.getenv(
         "OTLP_TRACES_ENDPOINT",
-        "http://127.0.0.1:6006/v1/traces"
+        "http://localhost:6006/v1/traces"
     )
 
     # 🔥 Chunking

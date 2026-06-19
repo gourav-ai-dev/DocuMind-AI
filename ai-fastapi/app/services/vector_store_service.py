@@ -35,7 +35,7 @@ class VectorStoreService:
             ]
         )
 
-    def search_chunks(self, query_embedding, user_id, document_id, top_k=3):
+    def search_chunks(self, query_embedding, user_id, document_id, top_k=5):
         results = self.client.query_points(
             collection_name=self.collection_name,
             query=query_embedding,

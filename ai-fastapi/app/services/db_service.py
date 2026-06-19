@@ -65,7 +65,7 @@ class DBService:
         conn.commit()
         conn.close()
 
-    def get_recent_chats(self, user_id, document_Id, limit=3):
+    def get_recent_chats(self, user_id, document_Id, limit=5):
 
         conn = self.get_connection()
         cursor = conn.cursor()

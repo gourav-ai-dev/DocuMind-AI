@@ -16,5 +16,6 @@ openpyxl           # xlxs files
 # pandas           # optional for CSV
 arize-phoenix      # llm evlute 
 openinference-instrumentation-langchain   # testing llm
-
+openinference
+phoenix
 #imp cmds uvicorn app.main:app --reload --host 127.0.0.1 --port 8000 ,  .\venv\Scripts\Activate.ps1 , 

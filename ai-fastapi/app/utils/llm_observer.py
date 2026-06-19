@@ -1,11 +1,8 @@
 import logging
 import json
 from opentelemetry import trace
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from app.config import settings
-
+from phoenix.otel import register
 
 class LLMObserver:
     def __init__(self, llm_service):
@@ -14,6 +11,7 @@ class LLMObserver:
         self.session = None
 
     def start(self):
+        
         if not settings.ENABLE_OBSERVABILITY:
             self.tracer = trace.get_tracer(__name__)
             return
@@ -24,17 +22,16 @@ class LLMObserver:
 
                 self.session = px.launch_app()
                 logging.info("Phoenix running at: %s", self.session.url)
+
             except Exception as exc:
                 logging.warning("Phoenix UI failed to start: %s", exc)
+                
+        if not hasattr(self, "_phoenix_registered"):
+            register(project_name="DOCUMIND_AI")
+            self._phoenix_registered = True
 
-        tracer_provider = TracerProvider()
-        trace.set_tracer_provider(tracer_provider)
 
-        exporter = OTLPSpanExporter(endpoint=settings.OTLP_TRACES_ENDPOINT)
-
-        tracer_provider.add_span_processor(BatchSpanProcessor(exporter))
-
-        self.tracer = trace.get_tracer(__name__)
+        self.tracer = trace.get_tracer("DOCUMIND_AI")
         logging.info("LLM observer ready")
 
     def get_tracer(self):
@@ -64,14 +61,16 @@ Return JSON:
 }}
 """
 
-        return self.llm_service.generate_answer(
+        result = self.llm_service.generate_answer(
             question=eval_prompt, context="", chat_history=""
         )
+        
+        return result["answer"]
 
     def _default_evaluation(self):
         return {
-            "relevance": 0.0,
-            "groundedness": 0.0,
+            "relevance": None,
+            "groundedness": None,
             "hallucination": False,
             "reason": "Evaluation not executed"
         }
@@ -108,42 +107,47 @@ Return JSON:
         return normalized
 
     def _set_evaluation_attributes(self, span, evaluation):
-        span.set_attribute("eval.relevance", evaluation["relevance"])
-        span.set_attribute("eval.groundedness", evaluation["groundedness"])
-        span.set_attribute("eval.hallucination", evaluation["hallucination"])
+        if evaluation.get("relevance") is not None:
+            span.set_attribute("eval.relevance", evaluation["relevance"])
+        
+        if evaluation.get("groundedness") is not None:
+            span.set_attribute("eval.groundedness", evaluation["groundedness"])
+            
+        if evaluation.get("hallucination") is not False:
+            span.set_attribute("eval.hallucination", evaluation["hallucination"])
+            
         span.set_attribute("eval.reason", evaluation["reason"][:500])
 
     def _should_run_evaluation(self, context, answer):
-        return bool(settings.ENABLE_LLM_EVALUATION and context and len(answer) > 100)
+        return bool(settings.ENABLE_LLM_EVALUATION and context)
 
     def _should_retry(self, evaluation):
-        return evaluation.get("hallucination") or evaluation.get("groundedness", 0.0) < 0.5
+        groundedness = evaluation.get("groundedness")
+
+        return (evaluation.get("hallucination") is True or (groundedness is not None and groundedness < 0.7))
         
     def get_final_answer(self, question, context, chat_history, tracer):
         evaluation = self._default_evaluation()
-        evaluation["relevance"] = 1.0 if context else 0.0
-        evaluation["groundedness"] = 1.0
-        evaluation["reason"] = "Evaluation skipped"
         retry_used = False
 
         with tracer.start_as_current_span("llm_pipeline") as span:
 
-            answer = self.llm_service.generate_answer(
+            result = self.llm_service.generate_answer(
                 question=question,
                 context=context,
                 chat_history=chat_history
             )
+            
+            answer = result["answer"]
+            usage = result.get("usage", {})
+            
+            if usage:
+                span.set_attribute("llm.prompt_tokens", usage["prompt_tokens"])
+                span.set_attribute("llm.completion_tokens", usage["completion_tokens"])
+                span.set_attribute("llm.total_tokens", usage["total_tokens"])
+            
 
             span.set_attribute("llm.answer_preview", answer[:300])
-
-            if len(answer) < 50:
-                evaluation["reason"] = "Answer too short for evaluation"
-                self._set_evaluation_attributes(span, evaluation)
-                return {
-                    "answer": answer,
-                    "evaluation": evaluation,
-                    "retry_used": retry_used,
-                }
 
             if self._should_run_evaluation(context, answer):
 
@@ -178,9 +182,9 @@ Return JSON:
                 )
 
                 span.set_attribute("retry.used", True)
-                span.set_attribute("retry.preview", improved_answer[:300])
+                span.set_attribute("retry.preview", improved_answer["answer"][:300])
 
-                answer = improved_answer
+                answer = improved_answer["answer"]
 
         return {
             "answer": answer,
